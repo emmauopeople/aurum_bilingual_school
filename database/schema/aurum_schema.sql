@@ -1,0 +1,3 @@
+-- Canonical schema is maintained in database/migrations/001_initial_schema.sql
+-- Apply it with:
+-- psql -h localhost -U aurum_user -d aurum_db -f database/migrations/001_initial_schema.sql

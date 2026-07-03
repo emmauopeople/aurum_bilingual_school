@@ -1,0 +1,12 @@
+node_modules/
+dist/
+build/
+coverage/
+.env
+.env.*
+!.env.example
+uploads/
+database/data/
+.DS_Store
+npm-debug.log*
+.vscode/

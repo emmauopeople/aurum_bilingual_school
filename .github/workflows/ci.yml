@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [feature, dev, release, main]
+  pull_request:
+    branches: [dev, release, main]
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: aurum_user
+          POSTGRES_PASSWORD: ChangeThisStrongPassword!
+          POSTGRES_DB: aurum_db
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U aurum_user -d aurum_db"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgres://aurum_user:ChangeThisStrongPassword!@localhost:5432/aurum_db
+      JWT_SECRET: ci-only-secret
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm install
+      - name: Apply database schema
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+          psql "$DATABASE_URL" -f database/migrations/001_initial_schema.sql
+          psql "$DATABASE_URL" -f database/seeds/001_seed_content.sql
+      - run: npm run lint --workspaces --if-present
+      - run: npm run test --workspaces --if-present
+      - run: npm run build --workspaces --if-present

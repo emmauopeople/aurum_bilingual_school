@@ -1,0 +1,35 @@
+services:
+  public-web:
+    image: ghcr.io/OWNER/aurum-public-web:latest
+    networks: [traefik-public]
+    deploy:
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.aurum-public.rule=Host(`aurumschool.com`) || Host(`www.aurumschool.com`)
+        - traefik.http.routers.aurum-public.entrypoints=websecure
+        - traefik.http.routers.aurum-public.tls.certresolver=letsencrypt
+        - traefik.http.services.aurum-public.loadbalancer.server.port=80
+  admin-web:
+    image: ghcr.io/OWNER/aurum-admin-web:latest
+    networks: [traefik-public]
+  public-api:
+    image: ghcr.io/OWNER/aurum-public-api:latest
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+    volumes: [aurum_uploads:/app/uploads]
+    networks: [traefik-public, aurum-internal]
+  admin-api:
+    image: ghcr.io/OWNER/aurum-admin-api:latest
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      COOKIE_SECURE: "true"
+    volumes: [aurum_uploads:/app/uploads]
+    networks: [traefik-public, aurum-internal]
+volumes:
+  aurum_uploads:
+networks:
+  traefik-public:
+    external: true
+  aurum-internal:
+    driver: overlay

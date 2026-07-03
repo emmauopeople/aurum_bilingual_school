@@ -1,0 +1,88 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: aurum_user
+      POSTGRES_PASSWORD: ChangeThisStrongPassword!
+      POSTGRES_DB: aurum_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - aurum-postgres-data:/var/lib/postgresql/data
+      - ./database/migrations/001_initial_schema.sql:/docker-entrypoint-initdb.d/001_initial_schema.sql:ro
+      - ./database/seeds/001_seed_content.sql:/docker-entrypoint-initdb.d/002_seed_content.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aurum_user -d aurum_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  public-api:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.api
+      args:
+        APP_PATH: apps/public-api
+    environment:
+      PORT: 4000
+      DATABASE_URL: postgres://aurum_user:ChangeThisStrongPassword!@postgres:5432/aurum_db
+      CORS_ORIGINS: http://localhost:5173
+      UPLOAD_DIR: /app/uploads
+      PUBLIC_UPLOAD_BASE_URL: http://localhost:4000/uploads
+    ports:
+      - "4000:4000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - aurum-uploads:/app/uploads
+
+  admin-api:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.api
+      args:
+        APP_PATH: apps/admin-api
+    environment:
+      PORT: 4001
+      DATABASE_URL: postgres://aurum_user:ChangeThisStrongPassword!@postgres:5432/aurum_db
+      CORS_ORIGINS: http://localhost:5174
+      JWT_SECRET: replace-this-with-a-long-secret
+      COOKIE_SECURE: "false"
+      UPLOAD_DIR: /app/uploads
+      PUBLIC_UPLOAD_BASE_URL: http://localhost:4000/uploads
+    ports:
+      - "4001:4001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - aurum-uploads:/app/uploads
+
+  public-web:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.web
+      args:
+        APP_PATH: apps/public-web
+        VITE_PUBLIC_API_URL: http://localhost:4000
+    ports:
+      - "5173:80"
+    depends_on:
+      - public-api
+
+  admin-web:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.web
+      args:
+        APP_PATH: apps/admin-web
+        VITE_ADMIN_API_URL: http://localhost:4001
+    ports:
+      - "5174:80"
+    depends_on:
+      - admin-api
+
+volumes:
+  aurum-postgres-data:
+  aurum-uploads:
