@@ -1,10 +1,12 @@
 FROM node:20-alpine
 WORKDIR /app
 ARG APP_PATH
-COPY package*.json ./
-COPY ${APP_PATH}/package*.json ./${APP_PATH}/
-RUN npm install
-COPY ${APP_PATH} ./${APP_PATH}
-WORKDIR /app/${APP_PATH}
+
+COPY ${APP_PATH}/package*.json ./
+RUN npm install --omit=dev
+
+COPY ${APP_PATH}/ ./
+RUN mkdir -p uploads
+
 EXPOSE 4000
 CMD ["npm", "start"]
